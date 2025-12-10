@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useState, useCallback, useEffect } from "react";
 import { v4 as uuidv4 } from "uuid";
@@ -20,18 +20,12 @@ interface HistoryItem {
   timestamp: string;
 }
 
-function formatLocalTimestamp(date: Date) {
+function formatDateTime(date: Date): string {
   const pad = (n: number) => n.toString().padStart(2, "0");
-  const year = date.getFullYear();
-  const month = pad(date.getMonth() + 1);
-  const day = pad(date.getDate());
-  const hours = pad(date.getHours());
-  const minutes = pad(date.getMinutes());
-  const seconds = pad(date.getSeconds());
-  return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
 }
 
-export default function Page() {
+export default function JsonFormatterPage() {
   const [input, setInput] = useState("");
   const [output, setOutput] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -41,12 +35,14 @@ export default function Page() {
   const [showHistory, setShowHistory] = useState(false);
 
   useEffect(() => {
-    const s = localStorage.getItem("json-history");
-    if (s) {
+    const rawHistory = localStorage.getItem("json-history");
+    if (rawHistory) {
       try {
-        const arr = JSON.parse(s) as HistoryItem[];
+        const arr = JSON.parse(rawHistory) as HistoryItem[];
         setHistory(arr);
-      } catch { }
+      } catch {
+        setHistory([]);
+      }
     }
   }, []);
 
@@ -57,47 +53,45 @@ export default function Page() {
 
       if (history[0]?.input.trim() === trimmedContent) return;
 
-      const now = new Date();
-      const timestamp = formatLocalTimestamp(now);
-
       const item: HistoryItem = {
         id: uuidv4(),
         input: trimmedContent,
-        timestamp,
+        timestamp: formatDateTime(new Date()),
       };
 
-      const next = [item, ...history].slice(0, 100);
-      setHistory(next);
-      localStorage.setItem("json-history", JSON.stringify(next));
+      setHistory(prev => {
+        const next = [item, ...prev].slice(0, 100);
+        localStorage.setItem("json-history", JSON.stringify(next));
+        return next;
+      });
     },
     [history]
   );
 
-  const prettify = useCallback(() => {
+  const processJson = useCallback((formatter: (obj: any) => string) => {
     setError(null);
     try {
+      if (!input.trim()) {
+        setOutput("");
+        return;
+      }
       const obj = JSON.parse(input);
-      const pretty = JSON.stringify(obj, null, 2);
-      setOutput(pretty);
+      const processedOutput = formatter(obj);
+      setOutput(processedOutput);
       saveHistory(input);
     } catch (err) {
-      setError((err as Error).message);
+      setError(err instanceof Error ? err.message : "Invalid JSON format.");
       setOutput("");
     }
   }, [input, saveHistory]);
 
+  const prettify = useCallback(() => {
+    processJson((obj) => JSON.stringify(obj, null, 2));
+  }, [processJson]);
+
   const minify = useCallback(() => {
-    setError(null);
-    try {
-      const obj = JSON.parse(input);
-      const m = JSON.stringify(obj);
-      setOutput(m);
-      saveHistory(input);
-    } catch (err) {
-      setError((err as Error).message);
-      setOutput("");
-    }
-  }, [input, saveHistory]);
+    processJson((obj) => JSON.stringify(obj));
+  }, [processJson]);
 
   const clear = useCallback(() => {
     setInput("");
@@ -106,6 +100,7 @@ export default function Page() {
   }, []);
 
   const copyOutput = useCallback(() => {
+    if (!output) return;
     navigator.clipboard.writeText(output);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
@@ -113,16 +108,20 @@ export default function Page() {
 
   const restoreHistory = useCallback((h: HistoryItem) => {
     setInput(h.input);
+    setOutput("");
+    setError(null);
     setShowHistory(false);
   }, []);
 
   const deleteHistory = useCallback(
     (id: string) => {
-      const next = history.filter((it) => it.id !== id);
-      setHistory(next);
-      localStorage.setItem("json-history", JSON.stringify(next));
+      setHistory(prev => {
+        const next = prev.filter((it) => it.id !== id);
+        localStorage.setItem("json-history", JSON.stringify(next));
+        return next;
+      });
     },
-    [history]
+    []
   );
 
   const clearAllHistory = useCallback(() => {
@@ -137,15 +136,15 @@ export default function Page() {
     <div className={`p-4 flex flex-col h-full gap-4 transition-colors ${themeClasses}`}>
       <div className="flex justify-between items-center">
         <div className="flex gap-2">
-          <Button className={buttonPrimary} onClick={prettify}>
+          <Button className={buttonPrimary} onClick={prettify} disabled={!input.trim()}>
             Prettify
           </Button>
 
-          <Button variant="outline" onClick={minify}>
+          <Button variant="outline" onClick={minify} disabled={!input.trim()}>
             Minify
           </Button>
 
-          <Button variant="outline" onClick={clear}>
+          <Button variant="outline" onClick={clear} disabled={!input.trim()}>
             Clear
           </Button>
         </div>
@@ -156,6 +155,7 @@ export default function Page() {
       </div>
 
       <div className="flex-1 flex flex-col lg:flex-row gap-4 min-h-0">
+
         <div className="flex-1 flex flex-col min-h-0">
           <div className="flex justify-between items-center mb-2">
             <label className="text-sm opacity-70 font-mono">Input</label>
@@ -205,7 +205,6 @@ export default function Page() {
             <DialogTitle className="font-semibold">History</DialogTitle>
           </DialogHeader>
 
-          {/* <div className="mt-4 space-y-3 max-h-[65vh] overflow-y-auto pr-1"> */}
           <div className="space-y-3 max-h-[65vh] overflow-y-auto pr-1">
             {history.length === 0 && (
               <div className="text-sm opacity-70">No history</div>

@@ -1,7 +1,7 @@
 "use client"
 
 import { usePathname } from "next/navigation"
-import { Home, Braces } from "lucide-react"
+import { NAV_ITEMS } from "@/config/nav-config"
 
 import {
     Sidebar,
@@ -12,19 +12,6 @@ import {
     SidebarMenuItem
 } from "@/components/ui/sidebar"
 
-const items = [
-    {
-        title: "Home",
-        url: "/",
-        icon: Home,
-    },
-    {
-        title: "JSON",
-        url: "/json",
-        icon: Braces,
-    },
-]
-
 export function AppSidebar() {
     const pathname = usePathname()
 
@@ -33,11 +20,11 @@ export function AppSidebar() {
             <SidebarContent>
                 <SidebarGroupContent>
                     <SidebarMenu>
-                        {items.map((item) => {
+                        {NAV_ITEMS.map((item) => { // <-- 使用导入的配置
                             const isActive = pathname === item.url
                             return (
                                 <SidebarMenuItem key={item.title}>
-                                    <SidebarMenuButton 
+                                    <SidebarMenuButton
                                         asChild
                                         isActive={isActive}
                                     >

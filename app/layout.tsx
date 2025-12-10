@@ -21,7 +21,7 @@ import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/s
 import { AppSidebar } from "@/components/app-sidebar";
 import { Separator } from "@/components/ui/separator"
 import { AppBreadcrumb } from "@/components/app-breadcrumb";
-
+import { NavigationProvider } from "@/context/nav-context";
 
 export default function RootLayout({
   children,
@@ -33,25 +33,26 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <SidebarProvider>
-          <AppSidebar />
-          <SidebarInset>
-            <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
-              <SidebarTrigger className="-ml-1" />
+        <NavigationProvider>
+          <SidebarProvider>
+            <AppSidebar />
+            <SidebarInset>
+              <header className="flex h-16 shrink-0 items-center gap-2 border-b px-4">
+                <SidebarTrigger className="-ml-1" />
 
-              <Separator
-                orientation="vertical"
-                className="mr-2 data-[orientation=vertical]:h-4"
-              />
+                <Separator
+                  orientation="vertical"
+                  className="mr-2 data-[orientation=vertical]:h-4"
+                />
 
-              {/* 动态面包屑 —— 不再传 props */}
-              <AppBreadcrumb />
-            </header>
-            <main className="flex-1">
-              {children}
-            </main>
-          </SidebarInset>
-        </SidebarProvider>
+                <AppBreadcrumb />
+              </header>
+              <main className="flex-1">
+                {children}
+              </main>
+            </SidebarInset>
+          </SidebarProvider>
+        </NavigationProvider>
       </body>
     </html>
   );
